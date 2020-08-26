@@ -34,12 +34,12 @@ try:
 	from requests_html import HTMLSession
 
 	post_code = 'gu216yl'
-	min_price = 4000
-	max_price = 6000
+	min_price = 2500
+	max_price = 3600
 	min_mileage = 0
 	max_mileage = 57000
 	min_year = 2010
-	max_year = 2016
+	max_year = 2017
 	this_year = 2020
 	
 	search_url = r'https://www.autotrader.co.uk/car-search?postcode={post_code}&radius=15&price-from={min_price}&price-to={max_price}&year-from={min_year}&year-to={max_year}&maximum-mileage={max_mileage}&fuel-type=Petrol&quantity-of-doors=5&fuel-consumption=OVER_50'.format(
@@ -65,6 +65,7 @@ try:
 	page_count = int(
 		[li.find_all('strong')[1].text for li in search_soup.find_all('li') if 'class' in li.attrs and 'paginationMini__count' in li['class']][0]
 	)
+	print('Number of pages:', page_count)
 
 	ids = []
 	cars = []
@@ -78,15 +79,17 @@ try:
 		for id_ in this_page_ids:
 			id_li = search_soup.find('li', id = id_)
 			
-			spec_lis = id_li.find_all('li')
+			spec_lis = id_li.find_all('li', class_ = False)
 			if 'CAT' in spec_lis[0].text:
 				continue
 
-			try:
-				price = int(id_li.find('div', class_ = 'vehicle-price').text.replace('£', '').replace(',', ''))
-			except:
-				print('*** THERE WAS AN EXCEPTION ***')
-				import IPython; IPython.embed(colors='Neutral')
+			price_div = id_li.find('div', class_ = 'vehicle-price')
+			if price_div is not None:
+				price = int(price_div.text.replace('£', '').replace(',', ''))
+			else:
+				price_div = id_li.find('div', class_ = 'advert-card-pricing__price')
+				price = int(price_div.text.replace('£', '').replace(',', ''))
+
 			year = int(spec_lis[0].text.split(' ')[0])
 			mileage = int(spec_lis[2].text.replace(' miles', '').replace(',', ''))
 			distance = int(id_li.get('data-distance-value').split(' ')[0])
@@ -105,7 +108,7 @@ try:
 					'norm_price' : norm_price,
 					'norm_age' : norm_age,
 					'norm_mileage' : norm_mileage,
-					'score' : 1/3*(norm_price + norm_mileage + norm_age),
+					'score' : 1/6*(2*norm_price + 3*norm_mileage + 1*norm_age),
 				}
 			)
 
@@ -123,6 +126,7 @@ except:
 
 	import traceback
 	LOG.error("Something went wrong! Exception details:\n{}".format(traceback.format_exc()))
+	import IPython; IPython.embed(colors='Neutral')
 
 ## -------- GIVE THE USER A CHANCE TO READ MESSAGES-----------
 finally:
